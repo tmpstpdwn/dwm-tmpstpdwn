@@ -8,19 +8,19 @@ static const unsigned int snap      = 32;       /* snap pixel */
 static const int showbar            = 1;        /* 0 means no bar */
 static const int topbar             = 1;        /* 0 means bottom bar */
 static const int user_bh            = 5;        /* 0 means auto.*/
-static const int vertpad            = 0;       /* vertical padding of bar */
-static const int sidepad            = 0;       /* horizontal padding of bar */
-static const char *fonts[]          = { "SourceCodeVF:style=Semibold:size=9" };
-static const char col_gray1[]       = "#222222";
-static const char col_gray2[]       = "#444444";
-static const char col_gray3[]       = "#bbbbbb";
-static const char col_gray4[]       = "#eeeeee";
-static const char col_cyan[]        = "#005577";
-static const char *colors[][3]      = {
-	/*               fg         bg         border   */
-	[SchemeNorm] = { col_gray3, col_gray1, col_gray2 },
-	[SchemeSel]  = { col_gray4, col_cyan,  col_cyan  },
+static const char *fonts[]          = { "SourceCodeVF:style=Semibold:size=10" };
+static char normbgcolor[]           = "#222222";
+static char normbordercolor[]       = "#444444";
+static char normfgcolor[]           = "#bbbbbb";
+static char selfgcolor[]            = "#eeeeee";
+static char selbordercolor[]        = "#005577";
+static char selbgcolor[]            = "#005577";
+static char *colors[][3] = {
+       /*               fg           bg           border   */
+       [SchemeNorm] = { normfgcolor, normbgcolor, normbordercolor },
+       [SchemeSel]  = { selfgcolor,  selbgcolor,  selbordercolor  },
 };
+
 
 /* tagging */
 static const char *tags[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
@@ -41,7 +41,7 @@ static const Rule rules[] = {
 };
 
 /* layout(s) */
-static const float mfact     = 0.55; /* factor of master area size [0.05..0.95] */
+static const float mfact     = 0.5; /* factor of master area size [0.05..0.95] */
 static const int nmaster     = 1;    /* number of clients in master area */
 static const int resizehints = 1;    /* 1 means respect size hints in tiled resizals */
 static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen window */
@@ -80,8 +80,8 @@ view_prev(const Arg *arg) {
 /* commands */
 static const char *launcher[]  = { "launcher", NULL };
 static const char *quickinfo[]  = { "quickinfo", NULL };
-static const char *termcmd[]  = { "alacritty", NULL };
-static const char *filemanager[]  = { "alacritty", "-e", "lf-ub", NULL };
+static const char *termcmd[]  = { "st", NULL };
+static const char *filemanager[]  = { "st", "-e", "lf-ub", NULL };
 static const char *powermenu[]  = { "powermenu", NULL };
 static const char *screenshot[] = { "flameshot", "screen", NULL };
 static const char *screenshotl[] = { "flameshot", "launcher", NULL };
@@ -106,11 +106,13 @@ static const Key keys[] = {
   { 0,                            XF86XK_MonBrightnessDown,spawn, {.v = brightnessdown } },
   { MODKEY,                       XK_Up,     view_next,      {0} },
   { MODKEY,                       XK_Down,   view_prev,      {0} },
-/*  { MODKEY,                       XK_Left,   view_prev_occupied,      {0} },
+/*{ MODKEY,                       XK_Left,   view_prev_occupied,      {0} },
   { MODKEY,                       XK_Right,  view_next_occupied,      {0} },*/
 	{ MODKEY,                       XK_b,      togglebar,      {0} },
+	{ MODKEY,                       XK_Tab,      focusstack,     {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_Tab,      focusstack,     {.i = -1 } },
 	{ MODKEY,                       XK_j,      focusstack,     {.i = +1 } },
-	{ MODKEY,                       XK_k,      focusstack,     {.i = -1 } },
+	{ MODKEY|ShiftMask,             XK_k,      focusstack,     {.i = -1 } },
 	{ MODKEY,                       XK_i,      incnmaster,     {.i = +1 } },
 	{ MODKEY,                       XK_d,      incnmaster,     {.i = -1 } },
 	{ MODKEY,                       XK_h,      setmfact,       {.f = -0.05} },
@@ -123,13 +125,10 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_m,      setlayout,      {.v = &layouts[2]} },
 	{ MODKEY,                       XK_space,  setlayout,      {0} },
 	{ MODKEY|ShiftMask,             XK_space,  togglefloating, {0} },
-	{ MODKEY|ControlMask,           XK_space,  togglealwaysontop, {0} },
 	{ MODKEY,                       XK_0,      view,           {.ui = ~0 } },
 	{ MODKEY|ShiftMask,             XK_0,      tag,            {.ui = ~0 } },
 	{ MODKEY,                       XK_comma,  focusmon,       {.i = -1 } },
 	{ MODKEY,                       XK_period, focusmon,       {.i = +1 } },
-  { MODKEY,                       XK_Tab,      focussame,      {.i = +1 } },
-  { MODKEY|ShiftMask,             XK_Tab,      focussame,      {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_comma,  tagmon,         {.i = -1 } },
 	{ MODKEY|ShiftMask,             XK_period, tagmon,         {.i = +1 } },
 	TAGKEYS(                        XK_1,                      0)
@@ -162,3 +161,10 @@ static const Button buttons[] = {
 	{ ClkTagBar,            MODKEY,         Button3,        toggletag,      {0} },
 };
 
+/* signal definitions */
+/* signum must be greater than 0 */
+/* trigger signals using `xsetroot -name "fsignal:<signum>"` */
+static Signal signals[] = {
+	/* signum       function        argument  */
+	{ 1,            xrdb,      {.v = NULL} },
+};

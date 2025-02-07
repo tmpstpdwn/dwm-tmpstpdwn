@@ -35,6 +35,7 @@
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 #include <X11/Xproto.h>
+#include <X11/Xresource.h>
 #include <X11/Xutil.h>
 #ifdef XINERAMA
 #include <X11/extensions/Xinerama.h>
@@ -57,6 +58,21 @@
 #define TAGMASK                 ((1 << LENGTH(tags)) - 1)
 #define TAGSLENGTH              (LENGTH(tags))
 #define TEXTW(X)                (drw_fontset_getwidth(drw, (X)) + lrpad)
+#define XRDB_LOAD_COLOR(R,V)    if (XrmGetResource(xrdb, R, NULL, &type, &value) == True) { \
+                                  if (value.addr != NULL && strnlen(value.addr, 8) == 7 && value.addr[0] == '#') { \
+                                    int i = 1; \
+                                    for (; i <= 6; i++) { \
+                                      if (value.addr[i] < 48) break; \
+                                      if (value.addr[i] > 57 && value.addr[i] < 65) break; \
+                                      if (value.addr[i] > 70 && value.addr[i] < 97) break; \
+                                      if (value.addr[i] > 102) break; \
+                                    } \
+                                    if (i == 7) { \
+                                      strncpy(V, value.addr, 7); \
+                                      V[7] = '\0'; \
+                                    } \
+                                  } \
+                                }
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
@@ -93,7 +109,7 @@ struct Client {
 	int basew, baseh, incw, inch, maxw, maxh, minw, minh, hintsvalid;
 	int bw, oldbw;
 	unsigned int tags;
-  int isfixed, iscentered, isfloating, isalwaysontop, isurgent, neverfocus, oldstate, isfullscreen;
+  int isfixed, isfloating, isurgent, neverfocus, oldstate, isfullscreen;
 	Client *next;
 	Client *snext;
 	Monitor *mon;
@@ -106,6 +122,12 @@ typedef struct {
 	void (*func)(const Arg *);
 	const Arg arg;
 } Key;
+
+typedef struct {
+	unsigned int signum;
+	void (*func)(const Arg *);
+	const Arg arg;
+} Signal;
 
 typedef struct {
 	const char *symbol;
@@ -176,10 +198,11 @@ static long getstate(Window w);
 static int gettextprop(Window w, Atom atom, char *text, unsigned int size);
 static void grabbuttons(Client *c, int focused);
 static void grabkeys(void);
-static char* help();
 static void incnmaster(const Arg *arg);
 static void keypress(XEvent *e);
+static int fake_signal(void);
 static void killclient(const Arg *arg);
+static void loadxrdb(void);
 static void manage(Window w, XWindowAttributes *wa);
 static void mappingnotify(XEvent *e);
 static void maprequest(XEvent *e);
@@ -217,7 +240,6 @@ static void tagmon(const Arg *arg);
 static void tile(Monitor *m);
 static void togglebar(const Arg *arg);
 static void togglefloating(const Arg *arg);
-static void togglealwaysontop(const Arg *arg);
 static void toggletag(const Arg *arg);
 static void toggleview(const Arg *arg);
 static void unfocus(Client *c, int setfocus);
@@ -240,9 +262,8 @@ static Monitor *wintomon(Window w);
 static int xerror(Display *dpy, XErrorEvent *ee);
 static int xerrordummy(Display *dpy, XErrorEvent *ee);
 static int xerrorstart(Display *dpy, XErrorEvent *ee);
+static void xrdb(const Arg *arg);
 static void zoom(const Arg *arg);
-static void focussame(const Arg *arg);
-static Window lastfocusedwin = None;
 static void autostart_exec(void);
 
 /* variables */
@@ -252,8 +273,6 @@ static int screen;
 static int sw, sh;           /* X display screen geometry width, height */
 static int bh;               /* bar height */
 static int lrpad;            /* sum of left and right padding for text */
-static int vp;               /* vertical padding for bar */
-static int sp;               /* side padding for bar */
 static int (*xerrorxlib)(Display *, XErrorEvent *);
 static unsigned int numlockmask = 0;
 static void (*handler[LASTEvent]) (XEvent *) = {
@@ -611,7 +630,7 @@ configurenotify(XEvent *e)
 				for (c = m->clients; c; c = c->next)
 					if (c->isfullscreen)
 						resizeclient(c, m->mx, m->my, m->mw, m->mh);
-				XMoveResizeWindow(dpy, m->barwin, m->wx + sp, m->by + vp, m->ww -  2 * sp, bh);
+        XMoveResizeWindow(dpy, m->barwin, m->wx, m->by, m->ww, bh);
 			}
 			focus(NULL);
 			arrange(NULL);
@@ -751,8 +770,8 @@ drawbar(Monitor *m)
 	/* draw status first so it can be overdrawn by tags later */
 	if (m == selmon) { /* status is only drawn on selected monitor */
 		drw_setscheme(drw, scheme[SchemeNorm]);
-		tw = TEXTW(stext) - lrpad + 2; /* 2px right padding */
-		drw_text(drw, m->ww - tw - 2 * sp, 0, tw, bh, 0, stext, 0);
+		tw = TEXTW(stext) - lrpad + 2; /* 2px right padding */ 
+    drw_text(drw, m->ww - tw, 0, tw, bh, 0, stext, 0);
 	}
 
 	for (c = m->clients; c; c = c->next) {
@@ -778,15 +797,12 @@ drawbar(Monitor *m)
 	if ((w = m->ww - tw - x) > bh) {
 		if (m->sel) {
 			drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]);
-			drw_text(drw, x, 0, w - 2 * sp, bh, lrpad / 2, m->sel->name, 0);
-			if (m->sel->isfloating) {
+      drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
+			if (m->sel->isfloating)
 				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
-        if (m->sel->isalwaysontop)
-          drw_rect(drw, x + boxs, bh - boxw, boxw, boxw, 0, 0);
-      }
 		} else {
 			drw_setscheme(drw, scheme[SchemeNorm]);
-			drw_rect(drw, x, 0, w - 2 * sp, bh, 1, 1);
+      drw_rect(drw, x, 0, w, bh, 1, 1);
 		}
 	}
 	drw_map(drw, m->barwin, 0, 0, m->ww, bh);
@@ -828,59 +844,6 @@ expose(XEvent *e)
 
 	if (ev->count == 0 && (m = wintomon(ev->window)))
 		drawbar(m);
-}
-
-void
-focussame(const Arg *arg) {
-    Client *c;
-    XClassHint ch = { NULL, NULL };
-    char *class_name = NULL;
-    int direction = arg->i;
-
-    if (!selmon->sel)
-        return;
-
-    if (!XGetClassHint(dpy, selmon->sel->win, &ch))
-        return;
-    class_name = ch.res_class;
-
-    Client *clients[32];
-    int num_clients = 0;
-    for (c = selmon->clients; c && num_clients < 32; c = c->next) {
-        if (c->tags & selmon->tagset[selmon->seltags] && XGetClassHint(dpy, c->win, &ch)) {
-            if (strcmp(class_name, ch.res_class) == 0)
-                clients[num_clients++] = c;
-            XFree(ch.res_class);
-            XFree(ch.res_name);
-        }
-    }
-
-    Client *target_client = NULL;
-    if (direction == +1) {
-        for (int i = 0; i < num_clients; ++i) {
-            if (clients[i]->win == lastfocusedwin) {
-                target_client = clients[(i + 1) % num_clients];
-                break;
-            }
-        }
-        if (!target_client)
-            target_client = clients[0];
-    } else if (direction == -1) {
-        for (int i = 0; i < num_clients; ++i) {
-            if (clients[i]->win == lastfocusedwin) {
-                target_client = clients[(i - 1 + num_clients) % num_clients];
-                break;
-            }
-        }
-        if (!target_client)
-            target_client = clients[num_clients - 1];
-    }
-
-    if (target_client) {
-        focus(target_client);
-        restack(selmon);
-        lastfocusedwin = target_client->win;
-    }
 }
 
 void
@@ -1074,12 +1037,6 @@ grabkeys(void)
 	}
 }
 
-char*
-help(void)
-{
-	return "usage: dwm [-hv] [-fn font] [-nb color] [-nf color] [-sb color] [-sf color]\n";
-}
-
 void
 incnmaster(const Arg *arg)
 {
@@ -1115,6 +1072,47 @@ keypress(XEvent *e)
 			keys[i].func(&(keys[i].arg));
 }
 
+int
+fake_signal(void)
+{
+	char fsignal[256];
+	char indicator[9] = "fsignal:";
+	char str_signum[16];
+	int i, v, signum;
+	size_t len_fsignal, len_indicator = strlen(indicator);
+
+	// Get root name property
+	if (gettextprop(root, XA_WM_NAME, fsignal, sizeof(fsignal))) {
+		len_fsignal = strlen(fsignal);
+
+		// Check if this is indeed a fake signal
+		if (len_indicator > len_fsignal ? 0 : strncmp(indicator, fsignal, len_indicator) == 0) {
+			memcpy(str_signum, &fsignal[len_indicator], len_fsignal - len_indicator);
+			str_signum[len_fsignal - len_indicator] = '\0';
+
+			// Convert string value into managable integer
+			for (i = signum = 0; i < strlen(str_signum); i++) {
+				v = str_signum[i] - '0';
+				if (v >= 0 && v <= 9) {
+					signum = signum * 10 + v;
+				}
+			}
+
+			// Check if a signal was found, and if so handle it
+			if (signum)
+				for (i = 0; i < LENGTH(signals); i++)
+					if (signum == signals[i].signum && signals[i].func)
+						signals[i].func(&(signals[i].arg));
+
+			// A fake signal was sent
+			return 1;
+		}
+	}
+
+	// No fake signal was sent, so proceed with update
+	return 0;
+}
+
 void
 killclient(const Arg *arg)
 {
@@ -1129,6 +1127,37 @@ killclient(const Arg *arg)
 		XSetErrorHandler(xerror);
 		XUngrabServer(dpy);
 	}
+}
+
+void
+loadxrdb()
+{
+  Display *display;
+  char * resm;
+  XrmDatabase xrdb;
+  char *type;
+  XrmValue value;
+
+  display = XOpenDisplay(NULL);
+
+  if (display != NULL) {
+    resm = XResourceManagerString(display);
+
+    if (resm != NULL) {
+      xrdb = XrmGetStringDatabase(resm);
+
+      if (xrdb != NULL) {
+        XRDB_LOAD_COLOR("dwm.normbordercolor", normbordercolor);
+        XRDB_LOAD_COLOR("dwm.normbgcolor", normbgcolor);
+        XRDB_LOAD_COLOR("dwm.normfgcolor", normfgcolor);
+        XRDB_LOAD_COLOR("dwm.selbordercolor", selbordercolor);
+        XRDB_LOAD_COLOR("dwm.selbgcolor", selbgcolor);
+        XRDB_LOAD_COLOR("dwm.selfgcolor", selfgcolor);
+      }
+    }
+  }
+
+  XCloseDisplay(display);
 }
 
 void
@@ -1330,8 +1359,10 @@ propertynotify(XEvent *e)
 	Window trans;
 	XPropertyEvent *ev = &e->xproperty;
 
-	if ((ev->window == root) && (ev->atom == XA_WM_NAME))
-		updatestatus();
+	if ((ev->window == root) && (ev->atom == XA_WM_NAME)) {
+		if (!fake_signal())
+			updatestatus();
+    }
 	else if (ev->state == PropertyDelete)
 		return; /* ignore */
 	else if ((c = wintoclient(ev->window))) {
@@ -1481,15 +1512,6 @@ restack(Monitor *m)
 		return;
 	if (m->sel->isfloating || !m->lt[m->sellt]->arrange)
 		XRaiseWindow(dpy, m->sel->win);
-
-  /* raise the aot window */ 
-  for(Monitor *m_search = mons; m_search; m_search = m_search->next){
-    for(c = m_search->clients; c; c = c->next){
-      if(c->isalwaysontop){
-        XRaiseWindow(dpy, c->win);
-      }
-    }
-  }
 
 	if (m->lt[m->sellt]->arrange) {
 		wc.stack_mode = Below;
@@ -1719,8 +1741,6 @@ setup(void)
 		die("no fonts could be loaded.");
 	lrpad = drw->fonts->h;
 	bh = drw->fonts->h + user_bh;
-	sp = sidepad;
-	vp = (topbar == 1) ? vertpad : - vertpad;
 	updategeom();
 
 	/* init atoms */
@@ -1887,7 +1907,7 @@ togglebar(const Arg *arg)
 {
 	selmon->showbar = !selmon->showbar;
 	updatebarpos(selmon);
-	XMoveResizeWindow(dpy, selmon->barwin, selmon->wx + sp, selmon->by + vp, selmon->ww - 2 * sp, bh);
+  XMoveResizeWindow(dpy, selmon->barwin, selmon->wx, selmon->by, selmon->ww, bh);
 	arrange(selmon);
 }
 
@@ -1902,24 +1922,6 @@ togglefloating(const Arg *arg)
 	if (selmon->sel->isfloating)
 		resize(selmon->sel, selmon->sel->x, selmon->sel->y,
 			selmon->sel->w, selmon->sel->h, 0);
-  else 
-    selmon->sel->isalwaysontop = 0; /* disabled, turn this off too */ 
-  arrange(selmon);
-}
-
-void 
-togglealwaysontop(const Arg *arg)
-{
-  if (!selmon->sel)
-    return;
-  if (selmon->sel->isfullscreen)
-    return;
-
-  if(selmon->sel->isalwaysontop){
-    selmon->sel->isalwaysontop = 0;
-  }else{
-    selmon->sel->isalwaysontop = 0;
-	}
 
 	arrange(selmon);
 }
@@ -2018,7 +2020,7 @@ updatebars(void)
 	for (m = mons; m; m = m->next) {
 		if (m->barwin)
 			continue;
-		m->barwin = XCreateWindow(dpy, root, m->wx + sp, m->by + vp, m->ww - 2 * sp, bh, 0, DefaultDepth(dpy, screen),
+    m->barwin = XCreateWindow(dpy, root, m->wx, m->by, m->ww, bh, 0, DefaultDepth(dpy, screen),
 				CopyFromParent, DefaultVisual(dpy, screen),
 				CWOverrideRedirect|CWBackPixmap|CWEventMask, &wa);
 		XDefineCursor(dpy, m->barwin, cursor[CurNormal]->cursor);
@@ -2033,11 +2035,11 @@ updatebarpos(Monitor *m)
 	m->wy = m->my;
 	m->wh = m->mh;
 	if (m->showbar) {
-		m->wh = m->wh - vertpad - bh;
-		m->by = m->topbar ? m->wy : m->wy + m->wh + vertpad;
-		m->wy = m->topbar ? m->wy + bh + vp : m->wy;
-	} else
-		m->by = -bh - vp;
+    m->wh -= bh;
+    m->by = m->topbar ? m->wy : m->wy + m->wh;
+    m->wy = m->topbar ? m->wy + bh : m->wy;
+	} else 
+  m->by = -bh;
 }
 
 void
@@ -2329,6 +2331,17 @@ xerrorstart(Display *dpy, XErrorEvent *ee)
 }
 
 void
+xrdb(const Arg *arg)
+{
+  loadxrdb();
+  int i;
+  for (i = 0; i < LENGTH(colors); i++)
+                scheme[i] = drw_scm_create(drw, colors[i], 3);
+  focus(NULL);
+  arrange(NULL);
+}
+
+void
 zoom(const Arg *arg)
 {
 	Client *c = selmon->sel;
@@ -2343,27 +2356,17 @@ zoom(const Arg *arg)
 int
 main(int argc, char *argv[])
 {
-	for(int i=1;i<argc;i+=1)
-		if (!strcmp("-v", argv[i]))
-			die("dwm-"VERSION);
-		else if (!strcmp("-h", argv[i]) || !strcmp("--help", argv[i]))
-			die(help());
-		else if (!strcmp("-fn", argv[i])) /* font set */
-			fonts[0] = argv[++i];
-		else if (!strcmp("-nb",argv[i])) /* normal background color */
-			colors[SchemeNorm][1] = argv[++i];
-		else if (!strcmp("-nf",argv[i])) /* normal foreground color */
-			colors[SchemeNorm][0] = argv[++i];
-		else if (!strcmp("-sb",argv[i])) /* selected background color */
-			colors[SchemeSel][1] = argv[++i];
-		else if (!strcmp("-sf",argv[i])) /* selected foreground color */
-			colors[SchemeSel][0] = argv[++i];
-		else die(help());
-	if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
-		fputs("warning: no locale support\n", stderr);
-	if (!(dpy = XOpenDisplay(NULL)))
+  if (argc == 2 && !strcmp("-v", argv[1]))
+    die("dwm-"VERSION);
+  else if (argc != 1)
+    die("usage: dwm [-v]");
+  if (!setlocale(LC_CTYPE, "") || !XSupportsLocale())
+    fputs("warning: no locale support\n", stderr);
+  if (!(dpy = XOpenDisplay(NULL)))
 		die("dwm: cannot open display");
 	checkotherwm();
+  XrmInitialize();
+  loadxrdb();
 	autostart_exec();
 	setup();
 #ifdef __OpenBSD__
