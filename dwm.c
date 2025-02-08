@@ -180,6 +180,7 @@ static void configure(Client *c);
 static void configurenotify(XEvent *e);
 static void configurerequest(XEvent *e);
 static Monitor *createmon(void);
+static void cyclelayout(const Arg *arg);
 static void destroynotify(XEvent *e);
 static void detach(Client *c);
 static void detachstack(Client *c);
@@ -257,6 +258,10 @@ static void updatetitle(Client *c);
 static void updatewindowtype(Client *c);
 static void updatewmhints(Client *c);
 static void view(const Arg *arg);
+static void viewnext(const Arg *arg);
+static void viewprev(const Arg *arg);
+static void viewnextnovacant(const Arg *arg);
+static void viewprevnovacant(const Arg *arg);
 static Client *wintoclient(Window w);
 static Monitor *wintomon(Window w);
 static int xerror(Display *dpy, XErrorEvent *ee);
@@ -493,9 +498,15 @@ buttonpress(XEvent *e)
 	}
 	if (ev->window == selmon->barwin) {
 		i = x = 0;
-		do
+		unsigned int occ = 0;
+		for(c = m->clients; c; c=c->next)
+			occ |= c->tags == TAGMASK ? 0 : c->tags;
+		do {
+			/* Do not reserve space for vacant tags */
+			if (!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+				continue;
 			x += TEXTW(tags[i]);
-		while (ev->x >= x && ++i < LENGTH(tags));
+		} while (ev->x >= x && ++i < LENGTH(tags));
 		if (i < LENGTH(tags)) {
 			click = ClkTagBar;
 			arg.ui = 1 << i;
@@ -708,6 +719,23 @@ createmon(void)
 }
 
 void
+cyclelayout(const Arg *arg) {
+	Layout *l;
+	for(l = (Layout *)layouts; l != selmon->lt[selmon->sellt]; l++);
+	if(arg->i > 0) {
+		if(l->symbol && (l + 1)->symbol)
+			setlayout(&((Arg) { .v = (l + 1) }));
+		else
+			setlayout(&((Arg) { .v = layouts }));
+	} else {
+		if(l != layouts && (l - 1)->symbol)
+			setlayout(&((Arg) { .v = (l - 1) }));
+		else
+			setlayout(&((Arg) { .v = &layouts[LENGTH(layouts) - 2] }));
+	}
+}
+
+void
 destroynotify(XEvent *e)
 {
 	Client *c;
@@ -775,19 +803,18 @@ drawbar(Monitor *m)
 	}
 
 	for (c = m->clients; c; c = c->next) {
-		occ |= c->tags;
+		occ |= c->tags == TAGMASK ? 0 : c->tags;
 		if (c->isurgent)
 			urg |= c->tags;
 	}
 	x = 0;
 	for (i = 0; i < LENGTH(tags); i++) {
+		/* Do not draw vacant tags */
+		if(!(occ & 1 << i || m->tagset[m->seltags] & 1 << i))
+			continue;
 		w = TEXTW(tags[i]);
 		drw_setscheme(drw, scheme[m->tagset[m->seltags] & 1 << i ? SchemeSel : SchemeNorm]);
 		drw_text(drw, x, 0, w, bh, lrpad / 2, tags[i], urg & 1 << i);
-		if (occ & 1 << i)
-			drw_rect(drw, x + boxs, boxs, boxw, boxw,
-				m == selmon && selmon->sel && selmon->sel->tags & 1 << i,
-				urg & 1 << i);
 		x += w;
 	}
 	w = TEXTW(m->ltsymbol);
@@ -806,7 +833,7 @@ drawbar(Monitor *m)
 		}
 	}
   drw_setscheme(drw, scheme[SchemeNorm]);
-  drw_rect(drw, 0, bh - 2, m->ww, 2, 1, 0);
+  drw_rect(drw, 0, bh - und_bh, m->ww, und_bh, 1, 0);
 	drw_map(drw, m->barwin, 0, 0, m->ww, bh);
 }
 
@@ -1742,7 +1769,7 @@ setup(void)
 	if (!drw_fontset_create(drw, fonts, LENGTH(fonts)))
 		die("no fonts could be loaded.");
 	lrpad = drw->fonts->h;
-	bh = drw->fonts->h + user_bh;
+	bh = drw->fonts->h + user_bh + und_bh;
 	updategeom();
 
 	/* init atoms */
@@ -1916,14 +1943,31 @@ togglebar(const Arg *arg)
 void
 togglefloating(const Arg *arg)
 {
-	if (!selmon->sel)
+	Client *c = selmon->sel;
+
+	if (!c)
 		return;
-	if (selmon->sel->isfullscreen) /* no support for fullscreen windows */
+	if (c->isfullscreen) /* no support for fullscreen windows */
 		return;
-	selmon->sel->isfloating = !selmon->sel->isfloating || selmon->sel->isfixed;
-	if (selmon->sel->isfloating)
-		resize(selmon->sel, selmon->sel->x, selmon->sel->y,
-			selmon->sel->w, selmon->sel->h, 0);
+
+	// Check if the current layout is floating
+	if (selmon->lt[selmon->sellt]->arrange == NULL)
+		return;
+
+	c->isfloating = !c->isfloating || c->isfixed;
+
+	if (c->isfloating) {
+		/* Adjust the size of the window */
+		int new_width = c->w * 0.8; /* 80% of the original width */
+		int new_height = c->h * 0.8; /* 80% of the original height */
+
+		/* Center the window */
+		c->x = selmon->mx + (selmon->mw / 2 - new_width / 2); /* center in x direction */
+		c->y = selmon->my + (selmon->mh / 2 - new_height / 2); /* center in y direction */
+
+		/* Resize the window with the new dimensions */
+		resize(c, c->x, c->y, new_width, new_height, 0);
+	}
 
 	arrange(selmon);
 }
@@ -2264,6 +2308,68 @@ view(const Arg *arg)
 	focus(NULL);
 	arrange(selmon);
 	updatecurrentdesktop();
+}
+
+// Function to view the next workspace
+void
+viewnext(const Arg *arg) {
+    Arg a = {.ui = (selmon->tagset[selmon->seltags] << 1) & TAGMASK};
+    if (a.ui == 0) a.ui = 1;
+    view(&a);
+}
+
+// Function to view the previous workspace
+void
+viewprev(const Arg *arg) {
+    Arg a = {.ui = selmon->tagset[selmon->seltags] >> 1};
+    if (a.ui == 0) a.ui = (1 << (LENGTH(tags) - 1));
+    view(&a);
+}
+
+// Function to view the next non vacant workspace
+void 
+viewnextnovacant(const Arg *arg) {
+    unsigned int seltag = selmon->tagset[selmon->seltags];
+    unsigned int usedtags = 0;
+    Client *c = selmon->clients;
+
+    if (!c)
+        return;
+
+    /* skip vacant tags */
+    do {
+        usedtags |= c->tags;
+        c = c->next;
+    } while (c);
+
+    do {
+        seltag = seltag == (1 << (LENGTH(tags) - 1)) ? 1 : seltag << 1;
+    } while (!(seltag & usedtags));
+
+    view(&(const Arg){.ui = seltag});
+}
+
+// Function to view the previous non vacant workspace
+void 
+viewprevnovacant(const Arg *arg) {
+    unsigned int seltag = selmon->tagset[selmon->seltags];
+    unsigned int usedtags = 0;
+    Client *c = selmon->clients;
+
+    if (!c)
+        return;
+
+    /* skip vacant tags */
+    do {
+        usedtags |= c->tags;
+        c = c->next;
+    } while (c);
+
+    do {
+        seltag = seltag == 1 ? (1 << (LENGTH(tags) - 1)) : seltag >> 1;
+    } while (!(seltag & usedtags));
+
+    view(&(const Arg){.ui = seltag});
 }
 
 Client *
