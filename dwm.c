@@ -1463,16 +1463,10 @@ resizeclient(Client *c, int x, int y, int w, int h)
 {
 	XWindowChanges wc;
 
-  unsigned int n;
   unsigned int gapoffset;
   unsigned int gapincr;
-  Client *nbc;
 
 	wc.border_width = c->bw;
-
-  /* Get number of clients for the client's monitor */ 
-  
-  for (n = 0, nbc = nexttiled(c->mon->clients); nbc; nbc = nexttiled(nbc->next), n++);
 
   /* Do nothing if layout is floating */ 
   
@@ -1480,7 +1474,7 @@ resizeclient(Client *c, int x, int y, int w, int h)
     gapincr = gapoffset = 0;
   } else { 
     /* Remove border and gap if layout is monocle or only one client */ 
-    if (c->mon->lt[c->mon->sellt]->arrange == monocle || n == 1) {
+    if (c->mon->lt[c->mon->sellt]->arrange == monocle) {
       gapoffset = 0;
       gapincr = -2 * borderpx;
       wc.border_width = 0;
