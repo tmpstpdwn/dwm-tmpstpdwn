@@ -21,7 +21,7 @@ make clean install
 
 ## Applied patches
 
-A lot, and custom changes have been made to the source.
+A lot, and custom patches have been applied made to the source.
 
 ## Running dwm
 

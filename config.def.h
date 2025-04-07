@@ -72,8 +72,8 @@ static Signal signals[] = {
 /* commands */
 static const char *launcher[]  = { "launcher", NULL };
 static const char *quickinfo[]  = { "quickinfo", NULL };
-static const char *termcmd[]  = { "st", NULL };
-static const char *filemanager[]  = { "st", "-e", "lf-ub", NULL };
+static const char *termcmd[]  = { "alacritty", NULL };
+static const char *filemanager[]  = { "alacritty", "-e", "lf-ub", NULL };
 static const char *powermenu[]  = { "powermenu", NULL };
 static const char *screenshot[] = { "flameshot", "screen", NULL };
 static const char *screenshotl[] = { "flameshot", "launcher", NULL };
