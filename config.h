@@ -73,7 +73,6 @@ static Signal signals[] = {
 static const char *launcher[]  = { "launcher", NULL };
 static const char *termcmd[]  = { "alacritty", NULL };
 static const char *filemanager[]  = { "alacritty", "-e", "lf-ub", NULL };
-static const char *powermenu[]  = { "powermenu", NULL };
 static const char *screenshot[] = { "flameshot", "screen", NULL };
 static const char *screenshotl[] = { "flameshot", "launcher", NULL };
 static const char *upvol[]   = { "audioctrl", "ainc", NULL };
@@ -128,7 +127,6 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_7,                      6)
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
-	{ MODKEY|ShiftMask,             XK_q,                      spawn,          {.v = powermenu} },
   { MODKEY,                       XK_Escape,                 quit,           {0} },
 };
 
