@@ -71,7 +71,6 @@ static Signal signals[] = {
 
 /* commands */
 static const char *launcher[]  = { "launcher", NULL };
-static const char *quickinfo[]  = { "quickinfo", NULL };
 static const char *termcmd[]  = { "alacritty", NULL };
 static const char *filemanager[]  = { "alacritty", "-e", "lf-ub", NULL };
 static const char *powermenu[]  = { "powermenu", NULL };
@@ -88,7 +87,6 @@ static const Key keys[] = {
 	{ MODKEY,                       XK_p,                      spawn,          {.v = launcher } },
 	{ MODKEY|ShiftMask,             XK_Return,                 spawn,          {.v = termcmd } },
   { MODKEY,                       XK_Print,                  spawn,          {.v = screenshotl } },
-  { MODKEY|ShiftMask,             XK_i,                      spawn,          {.v = quickinfo } },
   { MODKEY|ShiftMask,             XK_l,                      spawn,          {.v = filemanager } },
   { 0,                            XK_Print,                  spawn,          {.v = screenshot } },
   { 0,                            XF86XK_AudioLowerVolume,   spawn,          {.v = downvol } },
