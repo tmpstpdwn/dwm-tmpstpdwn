@@ -18,7 +18,7 @@ static char selfgcolor[]            = "#eeeeee";
 static char selbordercolor[]        = "#005577";
 static char selbgcolor[]            = "#005577";
 static char *colors[][3] = {
-       /*               fg           bg           border   */
+       /*                   fg           bg           border     */
        [SchemeNorm] = { normfgcolor, normbgcolor, normbordercolor },
        [SchemeSel]  = { selfgcolor,  selbgcolor,  selbordercolor  },
 };
@@ -50,7 +50,7 @@ static const int lockfullscreen = 1; /* 1 will force focus on the fullscreen win
 static const Layout layouts[] = {
 	/* symbol     arrange function */
 	{ "[ ]=",      tile },    /* first entry is default */
-/*{ "><>",      NULL },    no layout function means floating behavior */
+    /*{ "><>",      NULL },    no layout function means floating behavior */
 	{ "[M]=",      monocle },
 	{ NULL,       NULL },
 };
@@ -83,41 +83,41 @@ static const char *brightnessdown[] = { "brightnessctrl", "bdec", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key                        function        argument */
-	{ MODKEY,                       XK_p,                      spawn,          {.v = launcher } },
-	{ MODKEY|ShiftMask,             XK_Return,                 spawn,          {.v = termcmd } },
-  { MODKEY,                       XK_Print,                  spawn,          {.v = screenshotl } },
-  { MODKEY|ShiftMask,             XK_l,                      spawn,          {.v = filemanager } },
-  { 0,                            XK_Print,                  spawn,          {.v = screenshot } },
-  { 0,                            XF86XK_AudioLowerVolume,   spawn,          {.v = downvol } },
-  { 0,                            XF86XK_AudioMute,          spawn,          {.v = toggvol } },
-  { 0,                            XF86XK_AudioRaiseVolume,   spawn,          {.v = upvol   } },
-  { 0,                            XF86XK_MonBrightnessUp,    spawn,          {.v = brightnessup } },
-  { 0,                            XF86XK_MonBrightnessDown,  spawn,          {.v = brightnessdown } },
-  { MODKEY,                       XK_Up,                     viewnext,       {0} },
-  { MODKEY,                       XK_Down,                   viewprev,       {0} },
-  { MODKEY,                       XK_Right,                  viewnextnovacant,    {0} },
-  { MODKEY,                       XK_Left,                   viewprevnovacant,    {0} },
-	{ MODKEY,                       XK_b,                      togglebar,      {0} },
-	{ MODKEY,                       XK_Tab,                    focusstack,     {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_Tab,                    focusstack,     {.i = -1 } },
-	{ MODKEY,                       XK_j,                      focusstack,     {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_k,                      focusstack,     {.i = -1 } },
-	{ MODKEY,                       XK_i,                      incnmaster,     {.i = +1 } },
-	{ MODKEY,                       XK_d,                      incnmaster,     {.i = -1 } },
-	{ MODKEY,                       XK_h,                      setmfact,       {.f = -0.05} },
-	{ MODKEY,                       XK_l,                      setmfact,       {.f = +0.05} },
-	{ MODKEY,                       XK_Return,                 zoom,           {0} },
-	{ MODKEY,                       XK_a,                      view,           {0} },
-	{ MODKEY,                       XK_q,                      killclient,     {0} },
-	{ MODKEY,		                    XK_space,                  cyclelayout,    {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_space,                  cyclelayout,    {.i = -1 } },
-	{ MODKEY,                       XK_f,                      togglefloating, {0} },
-	{ MODKEY,                       XK_0,                      view,           {.ui = ~0 } },
-	{ MODKEY|ShiftMask,             XK_0,                      tag,            {.ui = ~0 } },
-	{ MODKEY,                       XK_comma,                  focusmon,       {.i = -1 } },
-	{ MODKEY,                       XK_period,                 focusmon,       {.i = +1 } },
-	{ MODKEY|ShiftMask,             XK_comma,                  tagmon,         {.i = -1 } },
-	{ MODKEY|ShiftMask,             XK_period,                 tagmon,         {.i = +1 } },
+	{ MODKEY,                       XK_p,                      spawn,              {.v = launcher } },
+	{ MODKEY|ShiftMask,             XK_Return,                 spawn,              {.v = termcmd } },
+    { MODKEY,                       XK_Print,                  spawn,              {.v = screenshotl } },
+    { MODKEY|ShiftMask,             XK_l,                      spawn,              {.v = filemanager } },
+    { 0,                            XK_Print,                  spawn,              {.v = screenshot } },
+    { 0,                            XF86XK_AudioLowerVolume,   spawn,              {.v = downvol } },
+    { 0,                            XF86XK_AudioMute,          spawn,              {.v = toggvol } },
+    { 0,                            XF86XK_AudioRaiseVolume,   spawn,              {.v = upvol   } },
+    { 0,                            XF86XK_MonBrightnessUp,    spawn,              {.v = brightnessup } },
+    { 0,                            XF86XK_MonBrightnessDown,  spawn,              {.v = brightnessdown } },
+    { MODKEY,                       XK_Up,                     viewnext,           {0} },
+    { MODKEY,                       XK_Down,                   viewprev,           {0} },
+    { MODKEY,                       XK_Right,                  viewnextnovacant,   {0} },
+    { MODKEY,                       XK_Left,                   viewprevnovacant,   {0} },
+	{ MODKEY,                       XK_b,                      togglebar,          {0} },
+	{ MODKEY,                       XK_Tab,                    focusstack,         {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_Tab,                    focusstack,         {.i = -1 } },
+	{ MODKEY,                       XK_j,                      focusstack,         {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_k,                      focusstack,         {.i = -1 } },
+	{ MODKEY,                       XK_i,                      incnmaster,         {.i = +1 } },
+	{ MODKEY,                       XK_d,                      incnmaster,         {.i = -1 } },
+	{ MODKEY,                       XK_h,                      setmfact,           {.f = -0.05} },
+	{ MODKEY,                       XK_l,                      setmfact,           {.f = +0.05} },
+	{ MODKEY,                       XK_Return,                 zoom,               {0} },
+	{ MODKEY,                       XK_a,                      view,               {0} },
+	{ MODKEY,                       XK_q,                      killclient,         {0} },
+	{ MODKEY,		                XK_space,                  cyclelayout,        {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_space,                  cyclelayout,        {.i = -1 } },
+	{ MODKEY,                       XK_f,                      togglefloating,     {0} },
+	{ MODKEY,                       XK_0,                      view,               {.ui = ~0 } },
+	{ MODKEY|ShiftMask,             XK_0,                      tag,                {.ui = ~0 } },
+	{ MODKEY,                       XK_comma,                  focusmon,           {.i = -1 } },
+	{ MODKEY,                       XK_period,                 focusmon,           {.i = +1 } },
+	{ MODKEY|ShiftMask,             XK_comma,                  tagmon,             {.i = -1 } },
+	{ MODKEY|ShiftMask,             XK_period,                 tagmon,             {.i = +1 } },
 	TAGKEYS(                        XK_1,                      0)
 	TAGKEYS(                        XK_2,                      1)
 	TAGKEYS(                        XK_3,                      2)
@@ -127,7 +127,7 @@ static const Key keys[] = {
 	TAGKEYS(                        XK_7,                      6)
 	TAGKEYS(                        XK_8,                      7)
 	TAGKEYS(                        XK_9,                      8)
-  { MODKEY,                       XK_Escape,                 quit,           {0} },
+    { MODKEY,                       XK_Escape,                 quit,               {0} },
 };
 
 /* button definitions */
