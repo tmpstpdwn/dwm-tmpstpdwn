@@ -76,7 +76,7 @@
 
 /* enums */
 enum { CurNormal, CurResize, CurMove, CurLast }; /* cursor */
-enum { SchemeNorm, SchemeSel }; /* color schemes */
+enum { SchemeNorm, SchemeSel, SchemeUndl }; /* color schemes */
 enum { NetSupported, NetWMName, NetWMState, NetWMCheck,
        NetWMFullscreen, NetActiveWindow, NetWMWindowType,
        NetWMWindowTypeDialog, NetClientList, NetDesktopNames, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop, NetLast }; /* EWMH atoms */
@@ -832,8 +832,8 @@ drawbar(Monitor *m)
       drw_rect(drw, x, 0, w, bh, 1, 1);
 		}
 	}
-  drw_setscheme(drw, scheme[SchemeNorm]);
-  drw_rect(drw, 0, bh - und_bh, m->ww, und_bh, 1, 0);
+    drw_setscheme(drw, scheme[SchemeUndl]);
+    drw_rect(drw, 0, bh - und_bh, m->ww, und_bh, 1, 0);
 	drw_map(drw, m->barwin, 0, 0, m->ww, bh);
 }
 
@@ -1182,6 +1182,7 @@ loadxrdb()
         XRDB_LOAD_COLOR("dwm.selbordercolor", selbordercolor);
         XRDB_LOAD_COLOR("dwm.selbgcolor", selbgcolor);
         XRDB_LOAD_COLOR("dwm.selfgcolor", selfgcolor);
+        XRDB_LOAD_COLOR("dwm.underlinecolor", underlinecolor);
       }
     }
   }
