@@ -80,8 +80,6 @@ static const char *screenshotl[] = { "flameshot", "launcher", NULL };
 static const char *upvol[]   = { "audioctrl", "ainc", NULL };
 static const char *downvol[] = { "audioctrl", "adec", NULL };
 static const char *toggvol[] = { "audioctrl", "atogg", NULL };
-static const char *brightnessup[] = { "brightnessctrl", "binc", NULL };
-static const char *brightnessdown[] = { "brightnessctrl", "bdec", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key                        function        argument */
@@ -93,8 +91,6 @@ static const Key keys[] = {
     { 0,                            XF86XK_AudioLowerVolume,   spawn,              {.v = downvol } },
     { 0,                            XF86XK_AudioMute,          spawn,              {.v = toggvol } },
     { 0,                            XF86XK_AudioRaiseVolume,   spawn,              {.v = upvol   } },
-    { 0,                            XF86XK_MonBrightnessUp,    spawn,              {.v = brightnessup } },
-    { 0,                            XF86XK_MonBrightnessDown,  spawn,              {.v = brightnessdown } },
     { MODKEY,                       XK_Up,                     viewnext,           {0} },
     { MODKEY,                       XK_Down,                   viewprev,           {0} },
     { MODKEY,                       XK_Right,                  viewnextnovacant,   {0} },
