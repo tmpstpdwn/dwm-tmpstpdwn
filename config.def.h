@@ -17,10 +17,12 @@ static char normfgcolor[]           = "#bbbbbb";
 static char selfgcolor[]            = "#eeeeee";
 static char selbordercolor[]        = "#005577";
 static char selbgcolor[]            = "#005577";
+static char underlinecolor[]        = "#ff0000";
 static char *colors[][3] = {
        /*                   fg           bg           border     */
        [SchemeNorm] = { normfgcolor, normbgcolor, normbordercolor },
-       [SchemeSel]  = { selfgcolor,  selbgcolor,  selbordercolor  },
+       [SchemeSel]  = { selfgcolor,  selbgcolor,  selbordercolor },
+       [SchemeUndl] = { underlinecolor, underlinecolor, underlinecolor },
 };
 
 /* tagging */
@@ -70,16 +72,14 @@ static Signal signals[] = {
 };
 
 /* commands */
-static const char *launcher[]  = { "launcher", NULL };
+static const char *launcher[]  = { "dmenu_launcher", NULL };
 static const char *termcmd[]  = { "alacritty", NULL };
-static const char *filemanager[]  = { "alacritty", "-e", "lf-ub", NULL };
+static const char *filemanager[]  = { "alacritty", "-e", "lf", NULL };
 static const char *screenshot[] = { "flameshot", "screen", NULL };
 static const char *screenshotl[] = { "flameshot", "launcher", NULL };
 static const char *upvol[]   = { "audioctrl", "ainc", NULL };
 static const char *downvol[] = { "audioctrl", "adec", NULL };
 static const char *toggvol[] = { "audioctrl", "atogg", NULL };
-static const char *brightnessup[] = { "brightnessctrl", "binc", NULL };
-static const char *brightnessdown[] = { "brightnessctrl", "bdec", NULL };
 
 static const Key keys[] = {
 	/* modifier                     key                        function        argument */
@@ -91,8 +91,6 @@ static const Key keys[] = {
     { 0,                            XF86XK_AudioLowerVolume,   spawn,              {.v = downvol } },
     { 0,                            XF86XK_AudioMute,          spawn,              {.v = toggvol } },
     { 0,                            XF86XK_AudioRaiseVolume,   spawn,              {.v = upvol   } },
-    { 0,                            XF86XK_MonBrightnessUp,    spawn,              {.v = brightnessup } },
-    { 0,                            XF86XK_MonBrightnessDown,  spawn,              {.v = brightnessdown } },
     { MODKEY,                       XK_Up,                     viewnext,           {0} },
     { MODKEY,                       XK_Down,                   viewprev,           {0} },
     { MODKEY,                       XK_Right,                  viewnextnovacant,   {0} },
